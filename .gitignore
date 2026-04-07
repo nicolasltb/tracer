@@ -1,0 +1,106 @@
+# =============================================================================
+# Python / FastAPI Backend (tracer-backend/)
+# =============================================================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.Python
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# uv
+.uv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Database
+*.db
+*.sqlite3
+
+# Alembic — keep migrations, ignore auto-generated junk
+alembic/versions/__pycache__/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.coveragerc
+
+# Ruff / linters
+.ruff_cache/
+
+# mypy
+.mypy_cache/
+
+# =============================================================================
+# Node / Expo / React Native Frontend (tracer-frontend/)
+# =============================================================================
+
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Expo native builds
+android/
+ios/
+*.apk
+*.aab
+*.ipa
+
+# Metro bundler
+.metro-health-check*
+
+# Package manager locks (keep one — commit whichever you use)
+# npm:  keep package-lock.json
+# yarn: keep yarn.lock / .yarn/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.pnp.*
+
+# =============================================================================
+# Docker
+# =============================================================================
+
+# Don't ignore compose files — they're project config
+# Ignore local override secrets if any
+docker-compose.local.yml
+
+# =============================================================================
+# IDE / Editor
+# =============================================================================
+
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Misc
+# =============================================================================
+
+*.log
+*.tmp
+*.bak
+.cache/
+CLAUDE.md
