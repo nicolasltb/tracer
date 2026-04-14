@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     BESU_CHAIN_ID: int = 1337
     CONTRACT_ADDRESS: str = "0x0000000000000000000000000000000000000000"
 
+    APP_BASE_URL: str = "http://localhost:8000"
+
     APP_ENV: str = "development"
     DEBUG: bool = True
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
