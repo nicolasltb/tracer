@@ -1,4 +1,50 @@
 services:
+  besu-node1:
+    image: hyperledger/besu:latest
+    volumes:
+      - ./besu/genesis.json:/config/genesis.json:ro
+      - ./besu/node1/key:/config/key:ro
+      - besu_data:/data
+    command:
+      - --genesis-file=/config/genesis.json
+      - --data-path=/data
+      - --node-private-key-file=/config/key
+      - --rpc-http-enabled=true
+      - --rpc-http-api=ETH,NET,QBFT,WEB3,MINER
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8545
+      - --rpc-http-cors-origins=*
+      - --host-allowlist=*
+      - --discovery-enabled=false
+      - --min-gas-price=0
+      - --logging=INFO
+    ports:
+      - "8545:8545"
+      - "30303:30303"
+    healthcheck:
+      # bash TCP device — works without curl/wget in the Besu image
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8545' 2>/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+
+  deployer:
+    build:
+      context: ./scripts
+    environment:
+      BESU_RPC_URL: http://besu-node1:8545
+      BESU_CHAIN_ID: ${BESU_CHAIN_ID:-1337}
+      CONTRACT_SOURCE_PATH: /contracts/CoffeeTrace.sol
+      ABI_OUTPUT_PATH: /output/CoffeeTrace.json
+      OUTPUT_DIR: /output
+    volumes:
+      - ./contracts:/contracts:ro
+      - contract_data:/output
+    depends_on:
+      besu-node1:
+        condition: service_healthy
+
   db:
     image: postgres:17-alpine
     environment:
@@ -26,15 +72,21 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS}
       WALLET_ENCRYPTION_KEY: ${WALLET_ENCRYPTION_KEY}
-      BESU_RPC_URL: ${BESU_RPC_URL}
+      BESU_RPC_URL: http://besu-node1:8545
       BESU_CHAIN_ID: ${BESU_CHAIN_ID}
       CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}
       APP_ENV: ${APP_ENV}
       DEBUG: ${DEBUG}
       CORS_ORIGINS: ${CORS_ORIGINS}
+    volumes:
+      - contract_data:/contract_data:ro
     depends_on:
       db:
         condition: service_healthy
+      deployer:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
+  besu_data:
+  contract_data:
