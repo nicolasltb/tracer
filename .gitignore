@@ -84,6 +84,7 @@ besu/node1/caches/
 besu/node1/data/
 besu/node1/LOCK
 besu/node1/VERSION_METADATA.json
+besu/node1/DATABASE_METADATA.json
 
 # =============================================================================
 # Docker
