@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { User } from '@/types';
-import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '@/services/api';
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '@/constants/storage';
 
 interface AuthState {
   user: User | null;

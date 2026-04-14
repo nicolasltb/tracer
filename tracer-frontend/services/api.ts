@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router';
 import {
   LoginRequest,
   LoginResponse,
@@ -8,17 +9,24 @@ import {
   User,
   WalletInfo,
   Batch,
-  BatchEvent,
+  BatchDetail,
+  BatchCreateResponse,
+  EventChainData,
   CreateBatchRequest,
   UpdateBatchStatusRequest,
-  CreateEventRequest,
   UpdateUserRequest,
+  QRTokenInfo,
+  QRScanRequest,
+  QRScanResponse,
+  TraceResponse,
 } from '@/types';
+import { useAuthStore } from '@/store/auth';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8000') + '/api/v1';
 
-export const TOKEN_KEY = 'access_token';
-export const REFRESH_TOKEN_KEY = 'refresh_token';
+// Re-exported for backwards compat — prefer importing from @/constants/storage directly
+export { TOKEN_KEY, REFRESH_TOKEN_KEY } from '@/constants/storage';
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '@/constants/storage';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -71,8 +79,8 @@ apiClient.interceptors.response.use(
 
         return apiClient(originalRequest);
       } catch {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
-        await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+        await useAuthStore.getState().logout();
+        router.replace('/(auth)/login');
         return Promise.reject(error);
       }
     }
@@ -124,13 +132,13 @@ export const batchesApi = {
     return response.data;
   },
 
-  get: async (id: string): Promise<Batch> => {
-    const response = await apiClient.get<Batch>(`/batches/${id}`);
+  get: async (id: string): Promise<BatchDetail> => {
+    const response = await apiClient.get<BatchDetail>(`/batches/${id}`);
     return response.data;
   },
 
-  create: async (data: CreateBatchRequest): Promise<Batch> => {
-    const response = await apiClient.post<Batch>('/batches/', data);
+  create: async (data: CreateBatchRequest): Promise<BatchCreateResponse> => {
+    const response = await apiClient.post<BatchCreateResponse>('/batches/', data);
     return response.data;
   },
 
@@ -142,15 +150,35 @@ export const batchesApi = {
 
 // Events API
 export const eventsApi = {
-  list: async (batchId: string): Promise<BatchEvent[]> => {
-    const response = await apiClient.get<BatchEvent[]>(`/batches/${batchId}/events/`);
+  list: async (batchId: string): Promise<EventChainData[]> => {
+    const response = await apiClient.get<EventChainData[]>(`/batches/${batchId}/events/`);
+    return response.data;
+  },
+};
+
+// QR Code API
+export const qrApi = {
+  info: async (token: string): Promise<QRTokenInfo> => {
+    const response = await apiClient.get<QRTokenInfo>(`/qr/${token}`);
     return response.data;
   },
 
-  create: async (batchId: string, data: CreateEventRequest): Promise<BatchEvent> => {
-    const response = await apiClient.post<BatchEvent>(`/batches/${batchId}/events/`, data);
+  scan: async (token: string, data: QRScanRequest): Promise<QRScanResponse> => {
+    const response = await apiClient.post<QRScanResponse>(`/qr/${token}/scan`, data);
     return response.data;
   },
+
+  batchActiveQr: async (batchId: string): Promise<QRTokenInfo> => {
+    const response = await apiClient.get<QRTokenInfo>(`/batches/${batchId}/qr`);
+    return response.data;
+  },
+
+  trace: async (token: string): Promise<TraceResponse> => {
+    const response = await apiClient.get<TraceResponse>(`/trace/${token}`);
+    return response.data;
+  },
+
+  imageUrl: (token: string): string => `${BASE_URL}/qr/${token}/image`,
 };
 
 export default apiClient;
