@@ -1,6 +1,6 @@
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
-from app.schemas.batch import BatchCreate, BatchPublic, BatchStatusUpdate, BatchWithEvents
-from app.schemas.event import EventCreate, EventPublic
+from app.schemas.batch import BatchCreate, BatchDetail, BatchPublic, BatchStatusUpdate
+from app.schemas.event import EventChainData, EventIndex
 from app.schemas.user import UserPublic, UserUpdate
 
 __all__ = [
@@ -13,7 +13,7 @@ __all__ = [
     "BatchCreate",
     "BatchPublic",
     "BatchStatusUpdate",
-    "BatchWithEvents",
-    "EventCreate",
-    "EventPublic",
+    "BatchDetail",
+    "EventIndex",
+    "EventChainData",
 ]
