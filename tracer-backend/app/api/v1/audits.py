@@ -268,11 +268,13 @@ async def submit_audit(
 
     certification, reason = await try_issue(db, audit)
 
-    # Recarrega para refletir certificação criada (se houver)
+    # Reconstrói a resposta a partir do estado atual; a certificação vem
+    # diretamente do retorno de try_issue para evitar relação em cache.
     audit = await get_audit_or_404(db, audit_id)
-    detail = _to_detail(audit)
+    detail_dict = _to_detail(audit).model_dump()
+    detail_dict["certification_id"] = certification.id if certification else None
     return AuditSubmitResponse(
-        **detail.model_dump(),
+        **detail_dict,
         certification_issued=certification is not None,
         certification_reason=reason or None,
     )
