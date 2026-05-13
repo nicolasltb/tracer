@@ -10,12 +10,12 @@ import { UserRole } from '@/types';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
+const HIDDEN_TAB = { display: 'none' as const };
+
 export default function AppLayout() {
   const storeUser = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
 
-  // Carrega o usuário antes de renderizar as abas — evita race condition
-  // entre a chegada do role e o gating de visibilidade das abas role-based.
   const { data: user, isLoading } = useQuery({
     queryKey: ['user-me'],
     queryFn: usersApi.me,
@@ -84,7 +84,7 @@ export default function AppLayout() {
         name="batches"
         options={{
           title: 'Lotes',
-          href: showBatches ? '/(app)/batches' : null,
+          tabBarItemStyle: showBatches ? undefined : HIDDEN_TAB,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'layers' as IoniconName} color={color} size={size} />
           ),
@@ -94,7 +94,7 @@ export default function AppLayout() {
         name="properties"
         options={{
           title: 'Propriedades',
-          href: showProperties ? '/(app)/properties/index' : null,
+          tabBarItemStyle: showProperties ? undefined : HIDDEN_TAB,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'leaf' as IoniconName} color={color} size={size} />
           ),
@@ -104,8 +104,7 @@ export default function AppLayout() {
         name="audits"
         options={{
           title: 'Auditorias',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          href: (showAudits ? '/(app)/audits/index' : null) as any,
+          tabBarItemStyle: showAudits ? undefined : HIDDEN_TAB,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'clipboard' as IoniconName} color={color} size={size} />
           ),

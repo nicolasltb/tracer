@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Button } from '@/components/Button';
+import { CalendarPickerModal, formatDisplayDate } from '@/components/CalendarPicker';
 import { propertiesApi } from '@/services/api';
 import {
   Certification,
@@ -605,6 +606,7 @@ function SaleModal({
   propertyId: string;
 }) {
   const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('');
   const [buyerDoc, setBuyerDoc] = useState('');
   const [quantityKg, setQuantityKg] = useState('');
@@ -653,13 +655,25 @@ function SaleModal({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Registrar venda">
-      <Text style={styles.label}>Data da venda (AAAA-MM-DD)</Text>
-      <TextInput
-        style={styles.input}
+      <Text style={styles.label}>Data da venda</Text>
+      <TouchableOpacity
+        style={[styles.input, styles.dateTrigger]}
+        onPress={() => setCalendarOpen(true)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.dateValue}>
+          {saleDate ? formatDisplayDate(saleDate) : 'Selecionar data'}
+        </Text>
+        <Ionicons name="calendar-outline" size={18} color={Colors.textMuted} />
+      </TouchableOpacity>
+      <CalendarPickerModal
+        visible={calendarOpen}
         value={saleDate}
-        onChangeText={setSaleDate}
-        placeholder="2026-05-13"
-        placeholderTextColor={Colors.textMuted}
+        onConfirm={(iso) => {
+          setSaleDate(iso);
+          setCalendarOpen(false);
+        }}
+        onClose={() => setCalendarOpen(false)}
       />
 
       <Text style={styles.label}>Comprador</Text>
@@ -913,6 +927,12 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     backgroundColor: Colors.surface,
   },
+  dateTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateValue: { fontSize: 14, color: Colors.textPrimary },
 
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   chip: {
