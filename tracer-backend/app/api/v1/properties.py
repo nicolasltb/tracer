@@ -22,7 +22,9 @@ from app.schemas.property import (
     WaterSourcePublic,
     WaterSourceUpdate,
 )
+from app.schemas.certification import CertificationPublic
 from app.schemas.sale import SaleRecordCreate, SaleRecordPublic
+from app.services.certification_service import get_active_certification
 from app.services.property_service import (
     assert_can_read,
     assert_can_write,
@@ -363,3 +365,22 @@ async def list_sales(
         .order_by(SaleRecord.sale_date.desc())
     )
     return result.scalars().all()
+
+
+# ─────────────────────────────────────────────────────────────────
+# Certification
+# ─────────────────────────────────────────────────────────────────
+
+@router.get(
+    "/{property_id}/certification",
+    response_model=CertificationPublic | None,
+)
+async def current_certification(
+    property_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retorna a certificação ativa e válida da propriedade, se houver."""
+    prop = await get_property_or_404(db, property_id)
+    assert_can_read(current_user, prop)
+    return await get_active_certification(db, prop.id)

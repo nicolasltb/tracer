@@ -107,6 +107,43 @@ async def register_batch_on_chain(
         return None
 
 
+async def record_certification_on_chain(
+    cert_id: str,
+    property_id: str,
+    on_chain_hash: str,
+    valid_until_unix: int,
+    actor_encrypted_key: str,
+) -> tuple[str | None, int | None]:
+    """
+    Registra o hash de uma Certification do Certifica Minas na blockchain.
+
+    O contrato é responsável por armazenar (cert_id, property_id, hash, valid_until)
+    de forma imutável. Retorna (tx_hash, block_number) ou (None, None) em caso
+    de falha — o sistema segue funcionando off-chain quando a rede está indisponível.
+    """
+    try:
+        w3 = get_web3()
+        contract = get_contract(w3)
+        account = get_account_from_db(actor_encrypted_key)
+
+        fn = contract.functions.recordCertification(
+            cert_id, property_id, on_chain_hash, valid_until_unix
+        )
+        receipt = _build_tx(w3, account, fn)
+
+        logger.info(
+            "Cert %s registrada on-chain: tx=%s block=%s",
+            cert_id,
+            receipt.transactionHash.hex(),
+            receipt.blockNumber,
+        )
+        return receipt.transactionHash.hex(), receipt.blockNumber
+
+    except Exception as exc:
+        logger.error("Erro ao registrar certificação na blockchain: %s", exc)
+        return None, None
+
+
 async def register_event_on_chain(
     batch_id: str,
     event_type: str,
