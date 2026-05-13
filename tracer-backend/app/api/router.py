@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, batches, documents, events, properties, qr, users
+from app.api.v1 import audits, auth, batches, documents, events, properties, qr, users
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -11,3 +11,4 @@ api_router.include_router(events.router)
 api_router.include_router(qr.router)
 api_router.include_router(documents.router)
 api_router.include_router(properties.router)
+api_router.include_router(audits.router)
