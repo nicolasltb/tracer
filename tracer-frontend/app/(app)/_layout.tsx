@@ -1,10 +1,23 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
+import { useAuthStore } from '@/store/auth';
+import { UserRole } from '@/types';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 export default function AppLayout() {
+  const role = useAuthStore((s) => s.user?.role);
+
+  // Visibilidade por papel — true = visível na tab bar
+  const showBatches =
+    role === UserRole.FARMER ||
+    role === UserRole.PROCESSOR ||
+    role === UserRole.TRANSPORTER ||
+    role === UserRole.ADMIN;
+  const showProperties = role === UserRole.FARMER || role === UserRole.ADMIN;
+  const showAudits = role === UserRole.AUDITOR || role === UserRole.ADMIN;
+
   return (
     <Tabs
       screenOptions={{
@@ -43,8 +56,30 @@ export default function AppLayout() {
         name="batches"
         options={{
           title: 'Lotes',
+          href: showBatches ? '/(app)/batches' : null,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'layers' as IoniconName} color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="properties"
+        options={{
+          title: 'Propriedades',
+          href: showProperties ? '/(app)/properties/index' : null,
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons name={'leaf' as IoniconName} color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="audits"
+        options={{
+          title: 'Auditorias',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          href: (showAudits ? '/(app)/audits/index' : null) as any,
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons name={'clipboard' as IoniconName} color={color} size={size} />
           ),
         }}
       />
