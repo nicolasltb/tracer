@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, require_roles
 from app.database import get_db
 from app.models.batch import Batch
+from app.models.property import Property
 from app.models.user import User, UserRole
 from app.schemas.batch import (
     BatchChainData,
@@ -50,9 +51,22 @@ async def create_batch(
     2. Envia TODOS os dados do lote para a blockchain
     3. Gera QR code para o próximo ator da cadeia
     """
+    result = await db.execute(select(Property).where(Property.id == payload.property_id))
+    prop = result.scalar_one_or_none()
+    if not prop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Propriedade não encontrada."
+        )
+    if current_user.role == UserRole.FARMER and prop.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Não é possível criar lote em propriedade de outro usuário.",
+        )
+
     batch = Batch(
         code=_generate_code(),
         owner_id=current_user.id,
+        property_id=prop.id,
     )
     db.add(batch)
     await db.flush()
@@ -62,11 +76,12 @@ async def create_batch(
         batch_data = {
             "coffee_type": payload.coffee_type.value,
             "weight_kg": payload.weight_kg,
-            "origin_farm": payload.origin_farm,
-            "origin_city": payload.origin_city,
-            "origin_state": payload.origin_state,
+            "origin_farm": prop.name,
+            "origin_city": prop.municipality,
+            "origin_state": prop.state,
             "harvest_date": payload.harvest_date.isoformat(),
             "description": payload.description,
+            "property_id": str(prop.id),
         }
         tx_hash = await register_batch_on_chain(
             str(batch.id),
@@ -93,6 +108,7 @@ async def create_batch(
         code=batch.code,
         status=batch.status,
         owner_id=batch.owner_id,
+        property_id=batch.property_id,
         tx_hash=batch.tx_hash,
         created_at=batch.created_at,
         updated_at=batch.updated_at,
@@ -164,6 +180,7 @@ async def get_batch(
         code=batch.code,
         status=batch.status,
         owner_id=batch.owner_id,
+        property_id=batch.property_id,
         tx_hash=batch.tx_hash,
         created_at=batch.created_at,
         chain=chain_data,

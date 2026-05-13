@@ -10,11 +10,9 @@ from app.models.batch import BatchStatus, CoffeeType
 # ---------- Request ----------
 
 class BatchCreate(BaseModel):
+    property_id: uuid.UUID
     coffee_type: CoffeeType
     weight_kg: float = Field(..., gt=0)
-    origin_farm: str = Field(..., min_length=2, max_length=255)
-    origin_city: str = Field(..., min_length=2, max_length=255)
-    origin_state: str = Field(..., min_length=2, max_length=2)
     harvest_date: datetime
     description: str | None = None
 
@@ -32,6 +30,7 @@ class BatchPublic(BaseModel):
     code: str
     status: BatchStatus
     owner_id: uuid.UUID
+    property_id: uuid.UUID
     tx_hash: str | None
     created_at: datetime
     updated_at: datetime
@@ -82,6 +81,7 @@ class BatchDetail(BaseModel):
     code: str
     status: BatchStatus
     owner_id: uuid.UUID
+    property_id: uuid.UUID
     tx_hash: str | None
     created_at: datetime
 

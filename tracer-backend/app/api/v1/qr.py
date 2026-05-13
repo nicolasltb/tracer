@@ -21,6 +21,7 @@ from app.services.blockchain_service import (
     get_events_from_chain,
     register_event_on_chain,
 )
+from app.services.certification_service import get_active_certification
 from app.services.qr_service import (
     generate_qr_image,
     get_active_qr_for_batch,
@@ -92,6 +93,19 @@ async def scan_qr(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Apenas usuários com papel '{qr.expected_role.value}' podem processar esta etapa.",
         )
+
+    # Bloqueia transição para CERTIFIED se a propriedade não tem cert ativa
+    if qr.next_status == BatchStatus.CERTIFIED:
+        cert = await get_active_certification(db, qr.batch.property_id)
+        if cert is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Propriedade não possui certificação Certifica Minas ativa. "
+                    "Realize uma auditoria com todos os requisitos conformes antes "
+                    "de certificar este lote."
+                ),
+            )
 
     event, next_qr = await process_scan(
         db=db,
