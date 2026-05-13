@@ -47,6 +47,15 @@ class User(Base):
     events: Mapped[list["BatchEvent"]] = relationship(  # noqa: F821
         "BatchEvent", back_populates="actor", lazy="select"
     )
+    properties: Mapped[list["Property"]] = relationship(  # noqa: F821
+        "Property", back_populates="owner", lazy="select", foreign_keys="Property.owner_id"
+    )
+    documents_uploaded: Mapped[list["Document"]] = relationship(  # noqa: F821
+        "Document", back_populates="uploaded_by", lazy="select"
+    )
+    audits_performed: Mapped[list["Audit"]] = relationship(  # noqa: F821
+        "Audit", back_populates="auditor", lazy="select", foreign_keys="Audit.auditor_id"
+    )
 
     def __repr__(self) -> str:
         return f"<User {self.email} [{self.role}]>"

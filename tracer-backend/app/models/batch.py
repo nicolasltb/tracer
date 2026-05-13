@@ -49,6 +49,9 @@ class Batch(Base):
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
+    property_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("properties.id"), nullable=False, index=True
+    )
 
     tx_hash: Mapped[str | None] = mapped_column(String(66))
     token_id: Mapped[str | None] = mapped_column(String(78))
@@ -61,6 +64,9 @@ class Batch(Base):
     )
 
     owner: Mapped["User"] = relationship("User", back_populates="batches")  # noqa: F821
+    property_: Mapped["Property"] = relationship(  # noqa: F821
+        "Property", back_populates="batches"
+    )
     events: Mapped[list["BatchEvent"]] = relationship(  # noqa: F821
         "BatchEvent", back_populates="batch", order_by="BatchEvent.created_at", lazy="select"
     )

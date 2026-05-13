@@ -24,5 +24,9 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
+    STORAGE_ROOT: str = "/var/lib/tracer/uploads"
+    MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024
+    ALLOWED_UPLOAD_MIME: list[str] = ["image/jpeg", "image/png", "application/pdf"]
+
 
 settings = Settings()
