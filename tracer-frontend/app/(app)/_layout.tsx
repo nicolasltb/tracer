@@ -1,15 +1,43 @@
+import React, { useEffect } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { Colors } from '@/constants/colors';
+import { usersApi } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { UserRole } from '@/types';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 export default function AppLayout() {
-  const role = useAuthStore((s) => s.user?.role);
+  const storeUser = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
 
-  // Visibilidade por papel — true = visível na tab bar
+  // Carrega o usuário antes de renderizar as abas — evita race condition
+  // entre a chegada do role e o gating de visibilidade das abas role-based.
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['user-me'],
+    queryFn: usersApi.me,
+    initialData: storeUser ?? undefined,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (user) setUser(user);
+  }, [user, setUser]);
+
+  if (isLoading && !storeUser) {
+    return (
+      <View style={styles.splash}>
+        <Text style={styles.splashEmoji}>☕</Text>
+        <ActivityIndicator color={Colors.secondary} size="large" />
+      </View>
+    );
+  }
+
+  const role = (user ?? storeUser)?.role;
+
   const showBatches =
     role === UserRole.FARMER ||
     role === UserRole.PROCESSOR ||
@@ -104,3 +132,14 @@ export default function AppLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
+  },
+  splashEmoji: { fontSize: 56 },
+});

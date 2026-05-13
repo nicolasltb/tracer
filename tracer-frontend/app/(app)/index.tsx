@@ -38,7 +38,7 @@ function getGreeting(): string {
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user: storeUser, setUser } = useAuthStore();
+  const storeUser = useAuthStore((s) => s.user);
 
   const {
     data: batches = [],
@@ -50,13 +50,11 @@ export default function DashboardScreen() {
     queryFn: batchesApi.list,
   });
 
+  // O usuário é pré-carregado em (app)/_layout.tsx; aqui apenas consultamos
+  // o cache via mesma queryKey para um refetch coordenado no pull-to-refresh.
   const { data: user, refetch: refetchUser } = useQuery({
     queryKey: ['user-me'],
-    queryFn: async () => {
-      const u = await usersApi.me();
-      setUser(u);
-      return u;
-    },
+    queryFn: usersApi.me,
     initialData: storeUser ?? undefined,
   });
 
