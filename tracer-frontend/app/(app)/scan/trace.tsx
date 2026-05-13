@@ -15,59 +15,48 @@ import { Colors } from '@/constants/colors';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/Button';
 import { qrApi } from '@/services/api';
-import { CoffeeType, EventType, UserRole, TraceEvent } from '@/types';
+import { TraceEvent } from '@/types';
 
-const COFFEE_TYPE_LABEL: Record<CoffeeType, string> = {
-  [CoffeeType.ARABICA]: 'Arábica',
-  [CoffeeType.ROBUSTA]: 'Robusta',
-  [CoffeeType.BLEND]: 'Blend',
+const EVENT_TYPE_LABEL: Record<string, string> = {
+  harvest: 'Colheita',
+  processing_start: 'Início do Processamento',
+  processing_end: 'Fim do Processamento',
+  pickup: 'Coleta',
+  in_transit: 'Em Trânsito',
+  delivery: 'Entrega',
+  roasting_start: 'Início da Torra',
+  roasting_end: 'Fim da Torra',
+  packaging: 'Embalagem',
+  inspection: 'Inspeção',
+  certification: 'Certificação',
+  note: 'Nota',
 };
 
-const EVENT_TYPE_LABEL: Record<EventType, string> = {
-  [EventType.HARVEST]: 'Colheita',
-  [EventType.PROCESSING_START]: 'Início do Processamento',
-  [EventType.PROCESSING_END]: 'Fim do Processamento',
-  [EventType.PICKUP]: 'Coleta',
-  [EventType.IN_TRANSIT]: 'Em Trânsito',
-  [EventType.DELIVERY]: 'Entrega',
-  [EventType.ROASTING_START]: 'Início da Torra',
-  [EventType.ROASTING_END]: 'Fim da Torra',
-  [EventType.PACKAGING]: 'Embalagem',
-  [EventType.INSPECTION]: 'Inspeção',
-  [EventType.CERTIFICATION]: 'Certificação',
-  [EventType.NOTE]: 'Nota',
+const EVENT_TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  harvest: 'leaf',
+  processing_start: 'settings',
+  processing_end: 'checkmark-circle',
+  pickup: 'cube',
+  in_transit: 'car',
+  delivery: 'home',
+  roasting_start: 'flame',
+  roasting_end: 'checkmark-done-circle',
+  packaging: 'archive',
+  inspection: 'search',
+  certification: 'ribbon',
+  note: 'document-text',
 };
 
-const EVENT_TYPE_ICON: Record<EventType, keyof typeof Ionicons.glyphMap> = {
-  [EventType.HARVEST]: 'leaf',
-  [EventType.PROCESSING_START]: 'settings',
-  [EventType.PROCESSING_END]: 'checkmark-circle',
-  [EventType.PICKUP]: 'cube',
-  [EventType.IN_TRANSIT]: 'car',
-  [EventType.DELIVERY]: 'home',
-  [EventType.ROASTING_START]: 'flame',
-  [EventType.ROASTING_END]: 'checkmark-done-circle',
-  [EventType.PACKAGING]: 'archive',
-  [EventType.INSPECTION]: 'search',
-  [EventType.CERTIFICATION]: 'ribbon',
-  [EventType.NOTE]: 'document-text',
+const COFFEE_TYPE_LABEL: Record<string, string> = {
+  arabica: 'Arábica',
+  robusta: 'Robusta',
+  blend: 'Blend',
 };
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  [UserRole.FARMER]: 'Fazendeiro',
-  [UserRole.PROCESSOR]: 'Processador',
-  [UserRole.TRANSPORTER]: 'Transportador',
-  [UserRole.AUDITOR]: 'Auditor',
-  [UserRole.ADMIN]: 'Administrador',
-};
-
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-';
   try {
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    return new Date(dateStr).toLocaleDateString('pt-BR');
   } catch {
     return dateStr;
   }
@@ -87,16 +76,9 @@ function formatDateTime(dateStr: string): string {
   }
 }
 
-function TraceEventItem({
-  event,
-  isLast,
-}: {
-  event: TraceEvent;
-  isLast: boolean;
-}) {
+function TraceEventItem({ event, isLast }: { event: TraceEvent; isLast: boolean }) {
   const icon = EVENT_TYPE_ICON[event.event_type] ?? 'ellipse';
   const label = EVENT_TYPE_LABEL[event.event_type] ?? event.event_type;
-  const roleLabel = ROLE_LABELS[event.actor_role] ?? event.actor_role;
 
   return (
     <View style={styles.eventRow}>
@@ -108,10 +90,12 @@ function TraceEventItem({
       </View>
       <View style={styles.eventContent}>
         <Text style={styles.eventLabel}>{label}</Text>
-        <Text style={styles.eventActor}>
-          {event.actor_name} ({roleLabel})
-        </Text>
-        <Text style={styles.eventDate}>{formatDateTime(event.created_at)}</Text>
+        <Text style={styles.eventDate}>{formatDateTime(event.timestamp)}</Text>
+        {event.actor_address ? (
+          <Text style={styles.eventActor} numberOfLines={1}>
+            {event.actor_address.slice(0, 10)}…{event.actor_address.slice(-6)}
+          </Text>
+        ) : null}
         {event.location ? (
           <View style={styles.eventMeta}>
             <Ionicons name="location-outline" size={12} color={Colors.textMuted} />
@@ -123,14 +107,10 @@ function TraceEventItem({
             <Text style={styles.notesText}>{event.notes}</Text>
           </View>
         ) : null}
-        {event.tx_hash ? (
-          <View style={styles.eventMeta}>
-            <Ionicons name="link-outline" size={12} color={Colors.status.in_transit} />
-            <Text style={styles.txText}>
-              {event.tx_hash.slice(0, 10)}...{event.tx_hash.slice(-8)}
-            </Text>
-          </View>
-        ) : null}
+        <View style={styles.eventMeta}>
+          <Ionicons name="cube-outline" size={12} color={Colors.status.in_transit} />
+          <Text style={styles.txText}>Bloco #{event.block_number}</Text>
+        </View>
       </View>
     </View>
   );
@@ -164,25 +144,47 @@ export default function TraceScreen() {
     );
   }
 
+  const coffeeLabel = trace.coffee_type ? COFFEE_TYPE_LABEL[trace.coffee_type] ?? trace.coffee_type : '-';
+
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <SafeAreaView edges={['top']}>
-          {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
               <Ionicons name="arrow-back" size={22} color={Colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Rastreio do Café</Text>
             <View style={styles.backButton} />
           </View>
+
+          {/* Certifica Minas seal */}
+          {trace.certification && trace.certification.is_active ? (
+            <View style={[styles.certBanner, styles.certActive]}>
+              <Ionicons name="ribbon" size={36} color={Colors.success} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.certTitleActive}>Certifica Minas ativo</Text>
+                <Text style={styles.certSubtitle}>
+                  Válido até {formatDate(trace.certification.valid_until)}
+                </Text>
+                <Text style={styles.certHash} numberOfLines={1}>
+                  hash: {trace.certification.on_chain_hash.slice(0, 18)}…
+                </Text>
+                {trace.certification.tx_hash ? (
+                  <Text style={styles.certHash} numberOfLines={1}>
+                    tx: {trace.certification.tx_hash.slice(0, 18)}…
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ) : (
+            <View style={[styles.certBanner, styles.certInactive]}>
+              <Ionicons name="information-circle" size={28} color={Colors.textMuted} />
+              <Text style={styles.certNoneText}>
+                Esta propriedade ainda não possui certificação Certifica Minas ativa.
+              </Text>
+            </View>
+          )}
 
           {/* Batch card */}
           <View style={styles.batchCard}>
@@ -194,22 +196,28 @@ export default function TraceScreen() {
             <View style={styles.batchGrid}>
               <View style={styles.batchField}>
                 <Text style={styles.fieldLabel}>Tipo</Text>
-                <Text style={styles.fieldValue}>
-                  {COFFEE_TYPE_LABEL[trace.coffee_type]}
-                </Text>
+                <Text style={styles.fieldValue}>{coffeeLabel}</Text>
               </View>
               <View style={styles.batchField}>
                 <Text style={styles.fieldLabel}>Peso</Text>
-                <Text style={styles.fieldValue}>{trace.weight_kg} kg</Text>
+                <Text style={styles.fieldValue}>
+                  {trace.weight_kg ? `${trace.weight_kg} kg` : '-'}
+                </Text>
               </View>
               <View style={styles.batchField}>
-                <Text style={styles.fieldLabel}>Fazenda</Text>
-                <Text style={styles.fieldValue}>{trace.origin_farm}</Text>
+                <Text style={styles.fieldLabel}>Propriedade</Text>
+                <Text style={styles.fieldValue}>
+                  {trace.property_?.name ?? trace.origin_farm ?? '-'}
+                </Text>
               </View>
               <View style={styles.batchField}>
                 <Text style={styles.fieldLabel}>Origem</Text>
                 <Text style={styles.fieldValue}>
-                  {trace.origin_city}, {trace.origin_state}
+                  {trace.property_
+                    ? `${trace.property_.municipality}, ${trace.property_.state}`
+                    : trace.origin_city
+                      ? `${trace.origin_city}, ${trace.origin_state ?? ''}`
+                      : '-'}
                 </Text>
               </View>
               <View style={styles.batchField}>
@@ -225,9 +233,7 @@ export default function TraceScreen() {
             {trace.tx_hash ? (
               <View style={styles.blockchainInfo}>
                 <Ionicons name="link-outline" size={14} color={Colors.status.in_transit} />
-                <Text style={styles.blockchainText}>
-                  Registrado na blockchain
-                </Text>
+                <Text style={styles.blockchainText}>Registrado na blockchain</Text>
               </View>
             ) : null}
           </View>
@@ -242,7 +248,7 @@ export default function TraceScreen() {
             ) : (
               trace.events.map((event, index) => (
                 <TraceEventItem
-                  key={`${event.event_type}-${event.created_at}`}
+                  key={`${event.event_type}-${event.timestamp}`}
                   event={event}
                   isLast={index === trace.events.length - 1}
                 />
@@ -256,10 +262,7 @@ export default function TraceScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -268,14 +271,8 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 32,
   },
-  errorText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
+  errorText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center' },
+  scrollContent: { paddingBottom: 40 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -285,9 +282,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backButton: {
-    width: 30,
-  },
+  backButton: { width: 30 },
   headerTitle: {
     flex: 1,
     fontSize: 18,
@@ -295,6 +290,33 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: 'center',
   },
+
+  // Certifica Minas seal
+  certBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 16,
+  },
+  certActive: { backgroundColor: Colors.successBg },
+  certInactive: { backgroundColor: Colors.surfaceElevated },
+  certTitleActive: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.success,
+  },
+  certSubtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  certHash: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontFamily: 'monospace',
+    marginTop: 2,
+  },
+  certNoneText: { flex: 1, fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+
   batchCard: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
@@ -312,19 +334,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  batchCode: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-  },
-  batchGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  batchField: {
-    width: '46%',
-  },
+  batchCode: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
+  batchGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  batchField: { width: '46%' },
   fieldLabel: {
     fontSize: 11,
     fontWeight: '600',
@@ -333,11 +345,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 2,
   },
-  fieldValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
+  fieldValue: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
   blockchainInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -352,32 +360,18 @@ const styles = StyleSheet.create({
     color: Colors.status.in_transit,
     fontWeight: '600',
   },
-  timelineSection: {
-    paddingHorizontal: 16,
-    marginTop: 8,
-  },
+
+  timelineSection: { paddingHorizontal: 16, marginTop: 8 },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: 16,
   },
-  emptyTimeline: {
-    paddingVertical: 24,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textMuted,
-  },
-  eventRow: {
-    flexDirection: 'row',
-  },
-  timelineCol: {
-    alignItems: 'center',
-    width: 36,
-    marginRight: 12,
-  },
+  emptyTimeline: { paddingVertical: 24, alignItems: 'center' },
+  emptyText: { fontSize: 14, color: Colors.textMuted },
+  eventRow: { flexDirection: 'row' },
+  timelineCol: { alignItems: 'center', width: 36, marginRight: 12 },
   eventDot: {
     width: 32,
     height: 32,
@@ -393,37 +387,18 @@ const styles = StyleSheet.create({
     marginVertical: 4,
     minHeight: 16,
   },
-  eventContent: {
-    flex: 1,
-    paddingBottom: 20,
-  },
-  eventLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
+  eventContent: { flex: 1, paddingBottom: 20 },
+  eventLabel: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
   eventActor: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.primary,
     fontWeight: '600',
     marginTop: 2,
+    fontFamily: 'monospace',
   },
-  eventDate: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 2,
-    marginBottom: 4,
-  },
-  eventMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  eventMetaText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
+  eventDate: { fontSize: 12, color: Colors.textMuted, marginTop: 2, marginBottom: 4 },
+  eventMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  eventMetaText: { fontSize: 12, color: Colors.textSecondary },
   notesBox: {
     backgroundColor: Colors.surfaceElevated,
     borderRadius: 8,
@@ -432,14 +407,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: Colors.border,
   },
-  notesText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  txText: {
-    fontSize: 11,
-    color: Colors.status.in_transit,
-    fontFamily: 'monospace',
-  },
+  notesText: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+  txText: { fontSize: 11, color: Colors.status.in_transit, fontFamily: 'monospace' },
 });
