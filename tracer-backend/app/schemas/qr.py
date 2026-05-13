@@ -106,6 +106,27 @@ class TraceEvent(BaseModel):
     block_number: int
 
 
+class TracePropertySummary(BaseModel):
+    """Resumo público da propriedade exibido no rastreio do consumidor."""
+
+    id: uuid.UUID
+    name: str
+    municipality: str
+    state: str
+
+
+class TraceCertification(BaseModel):
+    """Certificação Certifica Minas exibida no rastreio público."""
+
+    id: uuid.UUID
+    issued_at: datetime
+    valid_until: datetime
+    is_active: bool
+    on_chain_hash: str
+    tx_hash: str | None
+    block_number: int | None
+
+
 class TraceResponse(BaseModel):
     """Rastreio completo de um lote — dados da blockchain."""
 
@@ -121,4 +142,6 @@ class TraceResponse(BaseModel):
     origin_state: str | None = None
     harvest_date: str | None = None
     owner_address: str | None = None
+    property_: TracePropertySummary | None = None
+    certification: TraceCertification | None = None
     events: list[TraceEvent]

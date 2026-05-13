@@ -9,11 +9,14 @@ from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.batch import Batch, BatchStatus
 from app.models.user import User, UserRole
+from app.models.property import Property
 from app.schemas.qr import (
     QRScanRequest,
     QRScanResponse,
     QRTokenInfo,
+    TraceCertification,
     TraceEvent,
+    TracePropertySummary,
     TraceResponse,
 )
 from app.services.blockchain_service import (
@@ -222,6 +225,30 @@ async def public_trace(
             block_number=ev["block_number"],
         ))
 
+    # Resumo da propriedade e certificação Certifica Minas
+    prop_summary: TracePropertySummary | None = None
+    trace_cert: TraceCertification | None = None
+    result = await db.execute(select(Property).where(Property.id == batch.property_id))
+    prop = result.scalar_one_or_none()
+    if prop:
+        prop_summary = TracePropertySummary(
+            id=prop.id,
+            name=prop.name,
+            municipality=prop.municipality,
+            state=prop.state,
+        )
+        cert = await get_active_certification(db, prop.id)
+        if cert:
+            trace_cert = TraceCertification(
+                id=cert.id,
+                issued_at=cert.issued_at,
+                valid_until=cert.valid_until,
+                is_active=cert.is_active,
+                on_chain_hash=cert.on_chain_hash,
+                tx_hash=cert.tx_hash,
+                block_number=cert.block_number,
+            )
+
     return TraceResponse(
         code=batch.code,
         status=batch.status,
@@ -234,5 +261,7 @@ async def public_trace(
         origin_state=batch_data.get("origin_state"),
         harvest_date=batch_data.get("harvest_date"),
         owner_address=chain_batch["owner_address"] if chain_batch else None,
+        property_=prop_summary,
+        certification=trace_cert,
         events=trace_events,
     )
