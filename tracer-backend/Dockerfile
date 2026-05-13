@@ -30,6 +30,9 @@ COPY --from=deps --chown=app:app /app/.venv .venv
 # Application source
 COPY --chown=app:app . .
 
+# Diretório de uploads (Certifica Minas) — coincide com STORAGE_ROOT
+RUN mkdir -p /app/uploads && chown app:app /app/uploads
+
 RUN chmod +x entrypoint.sh
 
 USER app

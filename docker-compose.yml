@@ -80,6 +80,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS}
     volumes:
       - contract_data:/contract_data:ro
+      - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -90,3 +91,4 @@ volumes:
   postgres_data:
   besu_data:
   contract_data:
+  uploads_data:
