@@ -19,6 +19,26 @@ import {
   QRScanRequest,
   QRScanResponse,
   TraceResponse,
+  Property,
+  PropertyDetail,
+  CreatePropertyRequest,
+  UpdatePropertyRequest,
+  PropertyArea,
+  CreatePropertyAreaRequest,
+  WaterSource,
+  CreateWaterSourceRequest,
+  SaleRecord,
+  CreateSaleRequest,
+  Certification,
+  Document,
+  DocumentType,
+  Audit,
+  AuditDetail,
+  AuditSubmitResponse,
+  CreateAuditRequest,
+  UpsertCheckRequest,
+  SubmitAuditRequest,
+  ComplianceCheck,
 } from '@/types';
 import { useAuthStore } from '@/store/auth';
 
@@ -179,6 +199,178 @@ export const qrApi = {
   },
 
   imageUrl: (token: string): string => `${BASE_URL}/qr/${token}/image`,
+};
+
+// Properties API
+export const propertiesApi = {
+  list: async (): Promise<Property[]> => {
+    const response = await apiClient.get<Property[]>('/properties/');
+    return response.data;
+  },
+
+  get: async (id: string): Promise<PropertyDetail> => {
+    const response = await apiClient.get<PropertyDetail>(`/properties/${id}`);
+    return response.data;
+  },
+
+  create: async (data: CreatePropertyRequest): Promise<Property> => {
+    const response = await apiClient.post<Property>('/properties/', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: UpdatePropertyRequest): Promise<Property> => {
+    const response = await apiClient.patch<Property>(`/properties/${id}`, data);
+    return response.data;
+  },
+
+  // Areas
+  listAreas: async (propertyId: string): Promise<PropertyArea[]> => {
+    const response = await apiClient.get<PropertyArea[]>(`/properties/${propertyId}/areas`);
+    return response.data;
+  },
+
+  createArea: async (
+    propertyId: string,
+    data: CreatePropertyAreaRequest
+  ): Promise<PropertyArea> => {
+    const response = await apiClient.post<PropertyArea>(
+      `/properties/${propertyId}/areas`,
+      data
+    );
+    return response.data;
+  },
+
+  deleteArea: async (propertyId: string, areaId: string): Promise<void> => {
+    await apiClient.delete(`/properties/${propertyId}/areas/${areaId}`);
+  },
+
+  // Water sources
+  listWaterSources: async (propertyId: string): Promise<WaterSource[]> => {
+    const response = await apiClient.get<WaterSource[]>(
+      `/properties/${propertyId}/water-sources`
+    );
+    return response.data;
+  },
+
+  createWaterSource: async (
+    propertyId: string,
+    data: CreateWaterSourceRequest
+  ): Promise<WaterSource> => {
+    const response = await apiClient.post<WaterSource>(
+      `/properties/${propertyId}/water-sources`,
+      data
+    );
+    return response.data;
+  },
+
+  deleteWaterSource: async (propertyId: string, wsId: string): Promise<void> => {
+    await apiClient.delete(`/properties/${propertyId}/water-sources/${wsId}`);
+  },
+
+  // Sales
+  listSales: async (propertyId: string): Promise<SaleRecord[]> => {
+    const response = await apiClient.get<SaleRecord[]>(
+      `/properties/${propertyId}/sales`
+    );
+    return response.data;
+  },
+
+  createSale: async (
+    propertyId: string,
+    data: CreateSaleRequest
+  ): Promise<SaleRecord> => {
+    const response = await apiClient.post<SaleRecord>(
+      `/properties/${propertyId}/sales`,
+      data
+    );
+    return response.data;
+  },
+
+  // Certification
+  getCertification: async (propertyId: string): Promise<Certification | null> => {
+    const response = await apiClient.get<Certification | null>(
+      `/properties/${propertyId}/certification`
+    );
+    return response.data;
+  },
+};
+
+// Documents API
+export interface UploadDocumentInput {
+  uri: string;
+  name: string;
+  mimeType: string;
+  docType: DocumentType;
+  propertyId?: string;
+  auditId?: string;
+}
+
+export const documentsApi = {
+  upload: async (input: UploadDocumentInput): Promise<Document> => {
+    const form = new FormData();
+    // React Native's FormData accepts { uri, name, type } for file fields
+    form.append('file', {
+      uri: input.uri,
+      name: input.name,
+      type: input.mimeType,
+    } as unknown as Blob);
+    form.append('doc_type', input.docType);
+    if (input.propertyId) form.append('property_id', input.propertyId);
+    if (input.auditId) form.append('audit_id', input.auditId);
+
+    const response = await apiClient.post<Document>('/documents/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    });
+    return response.data;
+  },
+
+  meta: async (id: string): Promise<Document> => {
+    const response = await apiClient.get<Document>(`/documents/${id}/meta`);
+    return response.data;
+  },
+
+  fileUrl: (id: string): string => `${BASE_URL}/documents/${id}`,
+};
+
+// Audits API
+export const auditsApi = {
+  list: async (): Promise<Audit[]> => {
+    const response = await apiClient.get<Audit[]>('/audits/');
+    return response.data;
+  },
+
+  get: async (id: string): Promise<AuditDetail> => {
+    const response = await apiClient.get<AuditDetail>(`/audits/${id}`);
+    return response.data;
+  },
+
+  create: async (data: CreateAuditRequest): Promise<Audit> => {
+    const response = await apiClient.post<Audit>('/audits/', data);
+    return response.data;
+  },
+
+  upsertCheck: async (
+    auditId: string,
+    data: UpsertCheckRequest
+  ): Promise<ComplianceCheck> => {
+    const response = await apiClient.post<ComplianceCheck>(
+      `/audits/${auditId}/checks`,
+      data
+    );
+    return response.data;
+  },
+
+  submit: async (
+    auditId: string,
+    data: SubmitAuditRequest
+  ): Promise<AuditSubmitResponse> => {
+    const response = await apiClient.post<AuditSubmitResponse>(
+      `/audits/${auditId}/submit`,
+      data
+    );
+    return response.data;
+  },
 };
 
 export default apiClient;
