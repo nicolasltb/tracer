@@ -65,12 +65,7 @@ export default function BatchListScreen() {
 
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      result = result.filter(
-        (b) =>
-          b.code.toLowerCase().includes(q) ||
-          b.origin_farm.toLowerCase().includes(q) ||
-          b.origin_city.toLowerCase().includes(q)
-      );
+      result = result.filter((b) => b.code.toLowerCase().includes(q));
     }
 
     return result;
@@ -117,7 +112,7 @@ export default function BatchListScreen() {
               style={styles.searchInput}
               value={search}
               onChangeText={setSearch}
-              placeholder="Buscar por código ou fazenda..."
+              placeholder="Buscar por código..."
               placeholderTextColor={Colors.textMuted}
               returnKeyType="search"
             />
