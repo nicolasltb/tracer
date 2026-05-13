@@ -35,8 +35,18 @@ contract CoffeeTrace {
         uint256 blockNumber;
     }
 
+    struct Certification {
+        string propertyId;
+        string onChainHash;     // SHA-256 do payload + hashes dos documentos
+        uint256 issuedAt;
+        uint256 validUntil;
+        address issuer;
+        bool exists;
+    }
+
     mapping(string => Batch) public batches;
     mapping(string => BatchEvent[]) private _batchEvents;
+    mapping(string => Certification) public certifications;
 
     event BatchRegistered(
         string indexed batchId,
@@ -50,6 +60,14 @@ contract CoffeeTrace {
         string eventType,
         address indexed actor,
         uint256 timestamp
+    );
+
+    event CertificationRecorded(
+        string indexed certId,
+        string indexed propertyId,
+        string onChainHash,
+        address indexed issuer,
+        uint256 validUntil
     );
 
     // ─── Write ────────────────────────────────────────────────────────────────
@@ -86,6 +104,24 @@ contract CoffeeTrace {
             })
         );
         emit EventAdded(batchId, eventType, msg.sender, block.timestamp);
+    }
+
+    function recordCertification(
+        string calldata certId,
+        string calldata propertyId,
+        string calldata onChainHash,
+        uint256 validUntil
+    ) external {
+        require(!certifications[certId].exists, "CoffeeTrace: certification already recorded");
+        certifications[certId] = Certification({
+            propertyId: propertyId,
+            onChainHash: onChainHash,
+            issuedAt: block.timestamp,
+            validUntil: validUntil,
+            issuer: msg.sender,
+            exists: true
+        });
+        emit CertificationRecorded(certId, propertyId, onChainHash, msg.sender, validUntil);
     }
 
     // ─── Read ─────────────────────────────────────────────────────────────────
