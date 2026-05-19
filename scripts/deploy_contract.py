@@ -51,11 +51,16 @@ def compile_contract():
     install_solc("0.8.20", show_progress=True)
 
     source = CONTRACT_PATH.read_text()
+    # via_ir + optimizer evitam "stack too deep" em funções com muitos parâmetros
+    # (ex.: registerBatch tem 9). evm_version=paris pra não emitir PUSH0 (genesis Berlin).
     compiled = compile_source(
         source,
         output_values=["abi", "bin"],
         solc_version="0.8.20",
-        evm_version="paris",  # Besu genesis only enables Berlin — avoid PUSH0
+        evm_version="paris",
+        via_ir=True,
+        optimize=True,
+        optimize_runs=200,
     )
     contract_interface = compiled["<stdin>:CoffeeTrace"]
     return contract_interface["abi"], contract_interface["bin"]
