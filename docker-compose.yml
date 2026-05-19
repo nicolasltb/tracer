@@ -17,6 +17,8 @@ services:
       - --host-allowlist=*
       - --discovery-enabled=false
       - --min-gas-price=0
+      - --tx-pool-min-gas-price=0
+      - --tx-pool-no-local-priority=false
       - --logging=INFO
     ports:
       - "8545:8545"
