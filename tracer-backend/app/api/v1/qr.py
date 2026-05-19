@@ -11,6 +11,7 @@ from app.models.batch import Batch, BatchStatus
 from app.models.user import User, UserRole
 from app.models.property import Property
 from app.schemas.qr import (
+    METADATA_SCHEMA_BY_STATUS,
     QRScanRequest,
     QRScanResponse,
     QRTokenInfo,
@@ -20,9 +21,13 @@ from app.schemas.qr import (
     TraceResponse,
 )
 from app.services.blockchain_service import (
+    add_certification_audit_event_on_chain,
+    add_delivery_event_on_chain,
+    add_processing_event_on_chain,
+    add_roasting_event_on_chain,
+    add_transport_event_on_chain,
     get_batch_from_chain,
     get_events_from_chain,
-    register_event_on_chain,
 )
 from app.services.certification_service import get_active_certification
 from app.services.qr_service import (
@@ -35,6 +40,73 @@ from app.services.qr_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["QR Code"])
+
+
+async def _dispatch_chain_event(
+    origin_status: BatchStatus,
+    batch_id: str,
+    scan_payload: QRScanRequest,
+    metadata,
+    actor_encrypted_key: str,
+) -> tuple[str | None, int | None]:
+    """Roteia para a função tipada do contrato com base no status que estava sendo deixado."""
+    if origin_status == BatchStatus.HARVESTED:
+        return await add_processing_event_on_chain(
+            batch_id=batch_id,
+            location=scan_payload.location,
+            latitude=scan_payload.latitude,
+            longitude=scan_payload.longitude,
+            method=metadata.processing_method,
+            notes=scan_payload.notes,
+            actor_encrypted_key=actor_encrypted_key,
+        )
+    if origin_status == BatchStatus.PROCESSING:
+        return await add_roasting_event_on_chain(
+            batch_id=batch_id,
+            location=scan_payload.location,
+            latitude=scan_payload.latitude,
+            longitude=scan_payload.longitude,
+            temperature_c=metadata.temperature_c,
+            humidity_pct=metadata.humidity_pct,
+            duration_min=metadata.duration_min,
+            level=metadata.roast_level,
+            notes=scan_payload.notes,
+            actor_encrypted_key=actor_encrypted_key,
+        )
+    if origin_status == BatchStatus.ROASTING:
+        return await add_transport_event_on_chain(
+            batch_id=batch_id,
+            from_location=scan_payload.location,
+            latitude=scan_payload.latitude,
+            longitude=scan_payload.longitude,
+            transport_type=metadata.transport_type,
+            vehicle_id=metadata.vehicle_id,
+            notes=scan_payload.notes,
+            actor_encrypted_key=actor_encrypted_key,
+        )
+    if origin_status == BatchStatus.IN_TRANSIT:
+        return await add_delivery_event_on_chain(
+            batch_id=batch_id,
+            location=scan_payload.location,
+            latitude=scan_payload.latitude,
+            longitude=scan_payload.longitude,
+            condition=metadata.delivery_condition,
+            recipient_name=metadata.recipient_name,
+            notes=scan_payload.notes,
+            actor_encrypted_key=actor_encrypted_key,
+        )
+    if origin_status == BatchStatus.DELIVERED:
+        return await add_certification_audit_event_on_chain(
+            batch_id=batch_id,
+            location=scan_payload.location,
+            latitude=scan_payload.latitude,
+            longitude=scan_payload.longitude,
+            certificate_number=metadata.certificate_number,
+            standard=metadata.certification_standard,
+            notes=scan_payload.notes,
+            actor_encrypted_key=actor_encrypted_key,
+        )
+    return None, None
 
 
 # ---------- info ----------
@@ -110,26 +182,29 @@ async def scan_qr(
                 ),
             )
 
+    # Status de origem determina qual função tipada do contrato será chamada.
+    origin_status = qr.batch.status
+
+    # Valida metadata específico da etapa antes de avançar (Pydantic levanta 422 automaticamente).
+    metadata_schema = METADATA_SCHEMA_BY_STATUS.get(origin_status)
+    parsed_metadata = (
+        metadata_schema(**(payload.metadata_json or {})) if metadata_schema else None
+    )
+
     event, next_qr = await process_scan(
         db=db,
         qr=qr,
         user=current_user,
     )
 
-    # Registra evento na blockchain com TODOS os dados
-    if current_user.wallet_encrypted_key:
-        event_data = {
-            "location": payload.location,
-            "latitude": payload.latitude,
-            "longitude": payload.longitude,
-            "metadata": payload.metadata_json,
-            "notes": payload.notes,
-        }
-        tx_hash, block_number = await register_event_on_chain(
-            str(qr.batch_id),
-            event.event_type.value,
-            event_data,
-            current_user.wallet_encrypted_key,
+    # Despacha pra função tipada do contrato.
+    if current_user.wallet_encrypted_key and parsed_metadata is not None:
+        tx_hash, block_number = await _dispatch_chain_event(
+            origin_status=origin_status,
+            batch_id=str(qr.batch_id),
+            scan_payload=payload,
+            metadata=parsed_metadata,
+            actor_encrypted_key=current_user.wallet_encrypted_key,
         )
         if tx_hash:
             event.tx_hash = tx_hash
@@ -214,13 +289,16 @@ async def public_trace(
     chain_events = get_events_from_chain(str(batch.id))
     trace_events = []
     for ev in chain_events:
-        ev_data = ev.get("data", {})
+        ev_data = dict(ev.get("data", {}))
+        # `from_location` é o equivalente de `location` para eventos de transporte.
+        location = ev_data.pop("location", None) or ev_data.pop("from_location", None)
+        notes = ev_data.pop("notes", None)
         trace_events.append(TraceEvent(
             event_type=ev["event_type"],
             actor_address=ev["actor_address"],
-            location=ev_data.get("location"),
-            notes=ev_data.get("notes"),
-            metadata=ev_data.get("metadata"),
+            location=location,
+            notes=notes,
+            metadata=ev_data or None,
             timestamp=ev["timestamp"],
             block_number=ev["block_number"],
         ))

@@ -59,14 +59,19 @@ class BatchChainData(BaseModel):
 
 
 class EventChainData(BaseModel):
-    """Dados completos de um evento lidos da blockchain."""
+    """
+    Dados de um evento lidos da blockchain.
+
+    `event_type` reflete o EventKind do contrato (processing, roasting, transport,
+    delivery, certification_audit). Os campos específicos da etapa (method, roast_level,
+    vehicle_id, etc.) ficam em `metadata` — extraídos da struct tipada correspondente
+    pelo blockchain_service.
+    """
 
     event_type: str
     location: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
-    metadata: dict[str, Any] | None = None
     notes: str | None = None
+    metadata: dict[str, Any] | None = None
     actor_address: str
     timestamp: datetime
     block_number: int

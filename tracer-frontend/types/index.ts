@@ -21,6 +21,7 @@ export enum CoffeeType {
   BLEND = 'blend',
 }
 
+// EventType — índice local de eventos no DB (model BatchEvent).
 export enum EventType {
   HARVEST = 'harvest',
   PROCESSING_START = 'processing_start',
@@ -35,6 +36,14 @@ export enum EventType {
   CERTIFICATION = 'certification',
   NOTE = 'note',
 }
+
+// EventKind — etapas no smart contract (espelha o enum CoffeeTrace.EventKind).
+export type EventKind =
+  | 'processing'
+  | 'roasting'
+  | 'transport'
+  | 'delivery'
+  | 'certification_audit';
 
 export interface User {
   id: string;
@@ -79,12 +88,10 @@ export interface BatchChainData {
 // ---------- Event from chain ----------
 
 export interface EventChainData {
-  event_type: string;
+  event_type: EventKind;
   location: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  metadata_json: Record<string, unknown> | null;
   notes: string | null;
+  metadata: Record<string, unknown> | null;
   actor_address: string;
   timestamp: string;
   block_number: number;
@@ -169,11 +176,56 @@ export interface QRTokenInfo {
   is_active: boolean;
 }
 
+// ---------- Metadata por etapa (espelha schemas Pydantic do backend) ----------
+
+export type ProcessingMethod = 'washed' | 'natural' | 'honey' | 'pulped_natural';
+export type RoastLevel = 'light' | 'medium' | 'dark';
+export type TransportType = 'road' | 'sea' | 'rail';
+export type DeliveryCondition = 'good' | 'partial' | 'damaged';
+export type CertificationStandard =
+  | 'organic'
+  | 'fair_trade'
+  | 'rainforest_alliance'
+  | 'other';
+
+export interface ProcessingMetadata {
+  processing_method?: ProcessingMethod;
+}
+
+export interface RoastingMetadata {
+  temperature_c?: number;
+  humidity_pct?: number;
+  duration_min?: number;
+  roast_level?: RoastLevel;
+}
+
+export interface TransportMetadata {
+  transport_type?: TransportType;
+  vehicle_id?: string;
+}
+
+export interface DeliveryMetadata {
+  delivery_condition?: DeliveryCondition;
+  recipient_name?: string;
+}
+
+export interface CertificationMetadata {
+  certificate_number?: string;
+  certification_standard?: CertificationStandard;
+}
+
+export type ScanMetadata =
+  | ProcessingMetadata
+  | RoastingMetadata
+  | TransportMetadata
+  | DeliveryMetadata
+  | CertificationMetadata;
+
 export interface QRScanRequest {
   location?: string;
   latitude?: number;
   longitude?: number;
-  metadata_json?: Record<string, unknown>;
+  metadata_json?: ScanMetadata;
   notes?: string;
 }
 

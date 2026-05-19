@@ -23,7 +23,22 @@ import { Button } from '@/components/Button';
 import { StatusBadge } from '@/components/StatusBadge';
 import { qrApi } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
-import { QRScanRequest, UserRole, BatchStatus } from '@/types';
+import {
+  BatchStatus,
+  CertificationMetadata,
+  CertificationStandard,
+  DeliveryCondition,
+  DeliveryMetadata,
+  ProcessingMetadata,
+  ProcessingMethod,
+  QRScanRequest,
+  RoastLevel,
+  RoastingMetadata,
+  ScanMetadata,
+  TransportMetadata,
+  TransportType,
+  UserRole,
+} from '@/types';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.FARMER]: 'Fazendeiro',
@@ -44,13 +59,13 @@ const STATUS_LABELS: Record<BatchStatus, string> = {
 
 // ---------- ChipSelect ----------
 
-interface ChipSelectProps {
-  options: { label: string; value: string }[];
-  value: string;
-  onChange: (v: string) => void;
+interface ChipSelectProps<T extends string> {
+  options: { label: string; value: T }[];
+  value: T | '';
+  onChange: (v: T) => void;
 }
 
-function ChipSelect({ options, value, onChange }: ChipSelectProps) {
+function ChipSelect<T extends string>({ options, value, onChange }: ChipSelectProps<T>) {
   return (
     <View style={chipStyles.row}>
       {options.map((opt) => {
@@ -103,8 +118,8 @@ const chipStyles = StyleSheet.create({
 // ---------- Step-specific form sections ----------
 
 interface ProcessingFormProps {
-  processingMethod: string;
-  setProcessingMethod: (v: string) => void;
+  processingMethod: ProcessingMethod | '';
+  setProcessingMethod: (v: ProcessingMethod) => void;
 }
 
 function ProcessingForm({ processingMethod, setProcessingMethod }: ProcessingFormProps) {
@@ -132,8 +147,8 @@ interface RoastingFormProps {
   setHumidity: (v: string) => void;
   duration: string;
   setDuration: (v: string) => void;
-  roastLevel: string;
-  setRoastLevel: (v: string) => void;
+  roastLevel: RoastLevel | '';
+  setRoastLevel: (v: RoastLevel) => void;
 }
 
 function RoastingForm({
@@ -205,8 +220,8 @@ function RoastingForm({
 }
 
 interface TransportFormProps {
-  transportType: string;
-  setTransportType: (v: string) => void;
+  transportType: TransportType | '';
+  setTransportType: (v: TransportType) => void;
   vehicleId: string;
   setVehicleId: (v: string) => void;
 }
@@ -244,8 +259,8 @@ function TransportForm({ transportType, setTransportType, vehicleId, setVehicleI
 }
 
 interface DeliveryFormProps {
-  condition: string;
-  setCondition: (v: string) => void;
+  condition: DeliveryCondition | '';
+  setCondition: (v: DeliveryCondition) => void;
   recipientName: string;
   setRecipientName: (v: string) => void;
 }
@@ -284,8 +299,8 @@ function DeliveryForm({ condition, setCondition, recipientName, setRecipientName
 interface CertificationFormProps {
   certNumber: string;
   setCertNumber: (v: string) => void;
-  certStandard: string;
-  setCertStandard: (v: string) => void;
+  certStandard: CertificationStandard | '';
+  setCertStandard: (v: CertificationStandard) => void;
 }
 
 function CertificationForm({ certNumber, setCertNumber, certStandard, setCertStandard }: CertificationFormProps) {
@@ -334,25 +349,25 @@ export default function ProcessScreen() {
   const [notes, setNotes] = useState('');
 
   // Processing step
-  const [processingMethod, setProcessingMethod] = useState('');
+  const [processingMethod, setProcessingMethod] = useState<ProcessingMethod | ''>('');
 
   // Roasting step
   const [roastingTemp, setRoastingTemp] = useState('');
   const [roastingHumidity, setRoastingHumidity] = useState('');
   const [roastingDuration, setRoastingDuration] = useState('');
-  const [roastLevel, setRoastLevel] = useState('');
+  const [roastLevel, setRoastLevel] = useState<RoastLevel | ''>('');
 
   // Transport step
-  const [transportType, setTransportType] = useState('');
+  const [transportType, setTransportType] = useState<TransportType | ''>('');
   const [vehicleId, setVehicleId] = useState('');
 
   // Delivery step
-  const [deliveryCondition, setDeliveryCondition] = useState('');
+  const [deliveryCondition, setDeliveryCondition] = useState<DeliveryCondition | ''>('');
   const [recipientName, setRecipientName] = useState('');
 
   // Certification step
   const [certNumber, setCertNumber] = useState('');
-  const [certStandard, setCertStandard] = useState('');
+  const [certStandard, setCertStandard] = useState<CertificationStandard | ''>('');
 
   const [resultToken, setResultToken] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -390,15 +405,18 @@ export default function ProcessScreen() {
     },
   });
 
-  function buildMetadata(): Record<string, unknown> | undefined {
+  function buildMetadata(): ScanMetadata | undefined {
     if (!qrInfo) return undefined;
 
     switch (qrInfo.batch_status) {
-      case BatchStatus.HARVESTED:
-        return processingMethod ? { processing_method: processingMethod } : undefined;
+      case BatchStatus.HARVESTED: {
+        if (!processingMethod) return undefined;
+        const meta: ProcessingMetadata = { processing_method: processingMethod };
+        return meta;
+      }
 
       case BatchStatus.PROCESSING: {
-        const meta: Record<string, unknown> = {};
+        const meta: RoastingMetadata = {};
         if (roastingTemp) meta.temperature_c = parseFloat(roastingTemp);
         if (roastingHumidity) meta.humidity_pct = parseFloat(roastingHumidity);
         if (roastingDuration) meta.duration_min = parseFloat(roastingDuration);
@@ -407,21 +425,21 @@ export default function ProcessScreen() {
       }
 
       case BatchStatus.ROASTING: {
-        const meta: Record<string, unknown> = {};
+        const meta: TransportMetadata = {};
         if (transportType) meta.transport_type = transportType;
         if (vehicleId.trim()) meta.vehicle_id = vehicleId.trim();
         return Object.keys(meta).length ? meta : undefined;
       }
 
       case BatchStatus.IN_TRANSIT: {
-        const meta: Record<string, unknown> = {};
+        const meta: DeliveryMetadata = {};
         if (deliveryCondition) meta.delivery_condition = deliveryCondition;
         if (recipientName.trim()) meta.recipient_name = recipientName.trim();
         return Object.keys(meta).length ? meta : undefined;
       }
 
       case BatchStatus.DELIVERED: {
-        const meta: Record<string, unknown> = {};
+        const meta: CertificationMetadata = {};
         if (certNumber.trim()) meta.certificate_number = certNumber.trim();
         if (certStandard) meta.certification_standard = certStandard;
         return Object.keys(meta).length ? meta : undefined;

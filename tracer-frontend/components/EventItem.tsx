@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { EventChainData, EventType } from '@/types';
+import { EventChainData, EventKind } from '@/types';
 import { Colors } from '@/constants/colors';
 
 interface EventTypeConfig {
@@ -10,66 +10,31 @@ interface EventTypeConfig {
   color: string;
 }
 
-const EVENT_CONFIG: Record<EventType, EventTypeConfig> = {
-  [EventType.HARVEST]: {
-    label: 'Colheita',
-    icon: 'leaf',
-    color: Colors.status.harvested,
-  },
-  [EventType.PROCESSING_START]: {
-    label: 'Início do Processamento',
+const EVENT_CONFIG: Record<EventKind, EventTypeConfig> = {
+  processing: {
+    label: 'Processamento',
     icon: 'settings',
     color: Colors.status.processing,
   },
-  [EventType.PROCESSING_END]: {
-    label: 'Fim do Processamento',
-    icon: 'checkmark-circle',
-    color: Colors.status.processing,
+  roasting: {
+    label: 'Torra',
+    icon: 'flame',
+    color: Colors.status.roasting,
   },
-  [EventType.PICKUP]: {
-    label: 'Coleta',
-    icon: 'cube',
-    color: Colors.status.in_transit,
-  },
-  [EventType.IN_TRANSIT]: {
-    label: 'Em Trânsito',
+  transport: {
+    label: 'Transporte',
     icon: 'car',
     color: Colors.status.in_transit,
   },
-  [EventType.DELIVERY]: {
+  delivery: {
     label: 'Entrega',
     icon: 'home',
     color: Colors.status.delivered,
   },
-  [EventType.ROASTING_START]: {
-    label: 'Início da Torra',
-    icon: 'flame',
-    color: Colors.status.roasting,
-  },
-  [EventType.ROASTING_END]: {
-    label: 'Fim da Torra',
-    icon: 'checkmark-done-circle',
-    color: Colors.status.roasting,
-  },
-  [EventType.PACKAGING]: {
-    label: 'Embalagem',
-    icon: 'archive',
-    color: Colors.secondary,
-  },
-  [EventType.INSPECTION]: {
-    label: 'Inspeção',
-    icon: 'search',
-    color: Colors.textSecondary,
-  },
-  [EventType.CERTIFICATION]: {
+  certification_audit: {
     label: 'Certificação',
     icon: 'ribbon',
     color: Colors.status.certified,
-  },
-  [EventType.NOTE]: {
-    label: 'Nota',
-    icon: 'document-text',
-    color: Colors.textMuted,
   },
 };
 
@@ -129,17 +94,17 @@ const CERT_STANDARD_LABELS: Record<string, string> = {
 
 type MetaTag = { label: string; value: string };
 
-function buildMetaTags(type: EventType, meta: Record<string, unknown> | null): MetaTag[] {
+function buildMetaTags(kind: EventKind, meta: Record<string, unknown> | null): MetaTag[] {
   if (!meta) return [];
   const tags: MetaTag[] = [];
 
-  switch (type) {
-    case EventType.PROCESSING_START: {
-      if (meta.processing_method)
-        tags.push({ label: 'Método', value: PROCESSING_METHOD_LABELS[meta.processing_method as string] ?? String(meta.processing_method) });
+  switch (kind) {
+    case 'processing': {
+      if (meta.method)
+        tags.push({ label: 'Método', value: PROCESSING_METHOD_LABELS[meta.method as string] ?? String(meta.method) });
       break;
     }
-    case EventType.ROASTING_START: {
+    case 'roasting': {
       if (meta.temperature_c != null)
         tags.push({ label: 'Temperatura', value: `${meta.temperature_c}°C` });
       if (meta.humidity_pct != null)
@@ -150,21 +115,21 @@ function buildMetaTags(type: EventType, meta: Record<string, unknown> | null): M
         tags.push({ label: 'Nível', value: ROAST_LEVEL_LABELS[meta.roast_level as string] ?? String(meta.roast_level) });
       break;
     }
-    case EventType.PICKUP: {
+    case 'transport': {
       if (meta.transport_type)
         tags.push({ label: 'Transporte', value: TRANSPORT_TYPE_LABELS[meta.transport_type as string] ?? String(meta.transport_type) });
       if (meta.vehicle_id)
         tags.push({ label: 'Veículo', value: String(meta.vehicle_id) });
       break;
     }
-    case EventType.DELIVERY: {
+    case 'delivery': {
       if (meta.delivery_condition)
         tags.push({ label: 'Condição', value: DELIVERY_CONDITION_LABELS[meta.delivery_condition as string] ?? String(meta.delivery_condition) });
       if (meta.recipient_name)
         tags.push({ label: 'Destinatário', value: String(meta.recipient_name) });
       break;
     }
-    case EventType.CERTIFICATION: {
+    case 'certification_audit': {
       if (meta.certificate_number)
         tags.push({ label: 'Certificado', value: String(meta.certificate_number) });
       if (meta.certification_standard)
@@ -177,13 +142,13 @@ function buildMetaTags(type: EventType, meta: Record<string, unknown> | null): M
 }
 
 export function EventItem({ event, isLast = false }: EventItemProps) {
-  const config = EVENT_CONFIG[event.event_type as EventType] ?? {
+  const config = EVENT_CONFIG[event.event_type] ?? {
     label: event.event_type,
     icon: 'ellipse' as keyof typeof Ionicons.glyphMap,
     color: Colors.textMuted,
   };
 
-  const metaTags = buildMetaTags(event.event_type as EventType, event.metadata_json);
+  const metaTags = buildMetaTags(event.event_type, event.metadata);
 
   return (
     <View style={styles.container}>

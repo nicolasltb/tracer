@@ -71,23 +71,19 @@ async def create_batch(
     db.add(batch)
     await db.flush()
 
-    # Serializa todos os dados do lote para a blockchain
+    # Envia campos tipados ao contrato (conversões float→inteiro são feitas no service).
     if current_user.wallet_encrypted_key:
-        batch_data = {
-            "coffee_type": payload.coffee_type.value,
-            "weight_kg": payload.weight_kg,
-            "origin_farm": prop.name,
-            "origin_city": prop.municipality,
-            "origin_state": prop.state,
-            "harvest_date": payload.harvest_date.isoformat(),
-            "description": payload.description,
-            "property_id": str(prop.id),
-        }
         tx_hash = await register_batch_on_chain(
-            str(batch.id),
-            batch.code,
-            batch_data,
-            current_user.wallet_encrypted_key,
+            batch_id=str(batch.id),
+            batch_code=batch.code,
+            coffee_type=payload.coffee_type.value,
+            weight_kg=payload.weight_kg,
+            origin_farm=prop.name,
+            origin_city=prop.municipality,
+            origin_state=prop.state,
+            harvest_date=payload.harvest_date,
+            description=payload.description,
+            owner_encrypted_key=current_user.wallet_encrypted_key,
         )
         if tx_hash:
             batch.tx_hash = tx_hash
@@ -158,18 +154,19 @@ async def get_batch(
     if chain_batch:
         chain_data = BatchChainData(**chain_batch["data"])
 
-    # Lê eventos da blockchain
+    # Lê eventos da blockchain. Cada `data` traz os campos da struct tipada
+    # correspondente; extraímos location/notes e o resto vira `metadata`.
     chain_events_raw = get_events_from_chain(str(batch.id))
     chain_events = []
     for ev in chain_events_raw:
-        ev_data = ev.get("data", {})
+        ev_data = dict(ev.get("data", {}))
+        location = ev_data.pop("location", None) or ev_data.pop("from_location", None)
+        notes = ev_data.pop("notes", None)
         chain_events.append(EventChainData(
             event_type=ev["event_type"],
-            location=ev_data.get("location"),
-            latitude=ev_data.get("latitude"),
-            longitude=ev_data.get("longitude"),
-            metadata=ev_data.get("metadata"),
-            notes=ev_data.get("notes"),
+            location=location,
+            notes=notes,
+            metadata=ev_data or None,
             actor_address=ev["actor_address"],
             timestamp=ev["timestamp"],
             block_number=ev["block_number"],

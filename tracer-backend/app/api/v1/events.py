@@ -25,14 +25,14 @@ async def list_events(
     chain_events_raw = get_events_from_chain(str(batch_id))
     events = []
     for ev in chain_events_raw:
-        ev_data = ev.get("data", {})
+        ev_data = dict(ev.get("data", {}))
+        location = ev_data.pop("location", None) or ev_data.pop("from_location", None)
+        notes = ev_data.pop("notes", None)
         events.append(EventChainData(
             event_type=ev["event_type"],
-            location=ev_data.get("location"),
-            latitude=ev_data.get("latitude"),
-            longitude=ev_data.get("longitude"),
-            metadata_json=ev_data.get("metadata"),
-            notes=ev_data.get("notes"),
+            location=location,
+            notes=notes,
+            metadata=ev_data or None,
             actor_address=ev["actor_address"],
             timestamp=ev["timestamp"],
             block_number=ev["block_number"],

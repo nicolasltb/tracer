@@ -31,14 +31,17 @@ EventPublic = EventIndex
 # ---------- Chain-sourced event (full data) ----------
 
 class EventChainData(BaseModel):
-    """Evento completo lido da blockchain."""
+    """
+    Evento lido da blockchain.
+
+    `event_type` reflete o EventKind do contrato. Campos específicos da etapa
+    (method, roast_level, vehicle_id, etc.) ficam em `metadata`.
+    """
 
     event_type: str
     location: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
-    metadata_json: dict[str, Any] | None = None
     notes: str | None = None
+    metadata: dict[str, Any] | None = None
     actor_address: str
     timestamp: datetime
     block_number: int
