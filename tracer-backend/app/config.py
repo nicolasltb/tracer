@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     BESU_CHAIN_ID: int = 1337
     CONTRACT_ADDRESS: str = "0x0000000000000000000000000000000000000000"
 
+    # Conta com saldo pré-alocado no genesis. Usada para o deploy do contrato e
+    # para pré-fundar wallets de novos usuários (rede privada — "ETH" sem valor real).
+    FAUCET_PRIVATE_KEY: str = ""
+    FAUCET_FUND_WEI: int = 10**18  # 1 ETH por wallet nova
+
     APP_BASE_URL: str = "http://localhost:8000"
 
     APP_ENV: str = "development"

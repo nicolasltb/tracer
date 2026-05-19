@@ -12,6 +12,7 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
+from app.services.blockchain_service import fund_wallet
 from app.services.wallet_service import create_wallet
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,15 @@ async def register_user(payload: RegisterRequest, db: AsyncSession) -> User:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Não foi possível criar a carteira. Tente novamente.",
+        )
+
+    try:
+        fund_wallet(wallet_address)
+    except Exception:
+        logger.exception("Falha ao pré-financiar wallet %s para %s", wallet_address, payload.email)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Não foi possível inicializar a carteira na blockchain. Tente novamente.",
         )
 
     user = User(

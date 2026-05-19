@@ -10,7 +10,7 @@ services:
       - --data-path=/data
       - --node-private-key-file=/config/key
       - --rpc-http-enabled=true
-      - --rpc-http-api=ETH,NET,QBFT,WEB3,MINER
+      - --rpc-http-api=ETH,NET,QBFT,WEB3,MINER,TXPOOL,DEBUG
       - --rpc-http-host=0.0.0.0
       - --rpc-http-port=8545
       - --rpc-http-cors-origins=*
@@ -37,6 +37,7 @@ services:
     environment:
       BESU_RPC_URL: http://besu-node1:8545
       BESU_CHAIN_ID: ${BESU_CHAIN_ID:-1337}
+      FAUCET_PRIVATE_KEY: ${FAUCET_PRIVATE_KEY}
       CONTRACT_SOURCE_PATH: /contracts/CoffeeTrace.sol
       ABI_OUTPUT_PATH: /output/CoffeeTrace.json
       OUTPUT_DIR: /output
@@ -77,6 +78,8 @@ services:
       BESU_RPC_URL: http://besu-node1:8545
       BESU_CHAIN_ID: ${BESU_CHAIN_ID}
       CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}
+      FAUCET_PRIVATE_KEY: ${FAUCET_PRIVATE_KEY}
+      FAUCET_FUND_WEI: ${FAUCET_FUND_WEI:-1000000000000000000}
       APP_ENV: ${APP_ENV}
       DEBUG: ${DEBUG}
       CORS_ORIGINS: ${CORS_ORIGINS}

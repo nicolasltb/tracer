@@ -32,10 +32,11 @@ ABI_OUTPUT_PATH = Path(
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "")
 
 BESU_RPC_URL = os.environ.get("BESU_RPC_URL", "http://localhost:8545")
-# Dev-only key: Hardhat test account #0 — matches the validator in besu/genesis.json
-DEPLOYER_PRIVATE_KEY = (
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-)
+# Conta com saldo pré-alocado no genesis (também usada como faucet pelo backend).
+DEPLOYER_PRIVATE_KEY = os.environ.get("FAUCET_PRIVATE_KEY", "").strip()
+if not DEPLOYER_PRIVATE_KEY:
+    print("Error: FAUCET_PRIVATE_KEY env var not set.")
+    sys.exit(1)
 CHAIN_ID = int(os.environ.get("BESU_CHAIN_ID", "1337"))
 
 

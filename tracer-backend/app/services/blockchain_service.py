@@ -18,6 +18,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+from eth_account import Account
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware
 
@@ -54,6 +55,39 @@ def get_contract(w3: Web3):
         address=Web3.to_checksum_address(settings.CONTRACT_ADDRESS),
         abi=abi,
     )
+
+
+def fund_wallet(address: str) -> str:
+    """
+    Pré-financia um endereço a partir da conta-faucet (saldo pré-alocado no genesis).
+
+    Necessário porque o Besu QBFT descarta silenciosamente do tx-pool transações
+    de contas que ainda não existem no state trie — mesmo com gasPrice=0. Sem
+    saldo inicial, nenhuma tx do usuário é minerada.
+
+    Retorna o tx_hash. Lança RuntimeError em caso de falha.
+    """
+    if not settings.FAUCET_PRIVATE_KEY:
+        raise RuntimeError("FAUCET_PRIVATE_KEY não configurada — wallets não podem ser pré-financiadas.")
+
+    w3 = get_web3()
+    faucet = Account.from_key(settings.FAUCET_PRIVATE_KEY)
+    tx = {
+        "from": faucet.address,
+        "to": Web3.to_checksum_address(address),
+        "value": settings.FAUCET_FUND_WEI,
+        "gas": 21000,
+        "gasPrice": 0,
+        "nonce": w3.eth.get_transaction_count(faucet.address),
+        "chainId": settings.BESU_CHAIN_ID,
+    }
+    signed = faucet.sign_transaction(tx)
+    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
+    if receipt.status != 1:
+        raise RuntimeError(f"Faucet tx falhou (status={receipt.status}) para {address}")
+    logger.info("Wallet %s pré-financiada: tx=%s", address, receipt.transactionHash.hex())
+    return receipt.transactionHash.hex()
 
 
 def _build_tx(w3: Web3, account, fn):
