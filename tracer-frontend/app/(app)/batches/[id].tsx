@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { StatusBadge } from '@/components/StatusBadge';
 import { EventItem } from '@/components/EventItem';
+import { CopyableText } from '@/components/CopyableText';
 import { batchesApi, qrApi } from '@/services/api';
 import { BatchDetail, CoffeeType } from '@/types';
 
@@ -38,11 +39,6 @@ function formatDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
-}
-
-function truncateHash(hash: string): string {
-  if (hash.length <= 20) return hash;
-  return `${hash.slice(0, 10)}...${hash.slice(-10)}`;
 }
 
 interface InfoCardProps {
@@ -220,7 +216,12 @@ export default function BatchDetailScreen() {
                 <Ionicons name="link-outline" size={18} color={Colors.status.in_transit} />
                 <Text style={styles.blockchainTitle}>Blockchain</Text>
               </View>
-              <Text style={styles.txHash}>{truncateHash(batch.tx_hash)}</Text>
+              <CopyableText
+                value={batch.tx_hash}
+                truncate={{ head: 10, tail: 10 }}
+                textStyle={styles.txHash}
+                copiedLabel="Copiar hash da transação"
+              />
             </View>
           ) : null}
 

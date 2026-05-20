@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/Button';
+import { CopyableText } from '@/components/CopyableText';
 import { qrApi } from '@/services/api';
 import { TraceEvent } from '@/types';
 
@@ -92,9 +93,12 @@ function TraceEventItem({ event, isLast }: { event: TraceEvent; isLast: boolean 
         <Text style={styles.eventLabel}>{label}</Text>
         <Text style={styles.eventDate}>{formatDateTime(event.timestamp)}</Text>
         {event.actor_address ? (
-          <Text style={styles.eventActor} numberOfLines={1}>
-            {event.actor_address.slice(0, 10)}…{event.actor_address.slice(-6)}
-          </Text>
+          <CopyableText
+            value={event.actor_address}
+            truncate={{ head: 10, tail: 6 }}
+            textStyle={styles.eventActor}
+            copiedLabel="Copiar endereço do ator"
+          />
         ) : null}
         {event.location ? (
           <View style={styles.eventMeta}>
@@ -167,13 +171,25 @@ export default function TraceScreen() {
                 <Text style={styles.certSubtitle}>
                   Válido até {formatDate(trace.certification.valid_until)}
                 </Text>
-                <Text style={styles.certHash} numberOfLines={1}>
-                  hash: {trace.certification.on_chain_hash.slice(0, 18)}…
-                </Text>
+                <View style={styles.certHashRow}>
+                  <Text style={styles.certHash}>hash:</Text>
+                  <CopyableText
+                    value={trace.certification.on_chain_hash}
+                    truncate={{ head: 14, tail: 6 }}
+                    textStyle={styles.certHash}
+                    copiedLabel="Copiar hash on-chain"
+                  />
+                </View>
                 {trace.certification.tx_hash ? (
-                  <Text style={styles.certHash} numberOfLines={1}>
-                    tx: {trace.certification.tx_hash.slice(0, 18)}…
-                  </Text>
+                  <View style={styles.certHashRow}>
+                    <Text style={styles.certHash}>tx:</Text>
+                    <CopyableText
+                      value={trace.certification.tx_hash}
+                      truncate={{ head: 14, tail: 6 }}
+                      textStyle={styles.certHash}
+                      copiedLabel="Copiar hash da transação"
+                    />
+                  </View>
                 ) : null}
               </View>
             </View>
@@ -313,6 +329,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textMuted,
     fontFamily: 'monospace',
+  },
+  certHashRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: 2,
   },
   certNoneText: { flex: 1, fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },

@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Button } from '@/components/Button';
+import { CopyableText } from '@/components/CopyableText';
 import { usersApi } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { UserRole } from '@/types';
@@ -45,18 +46,14 @@ function formatDate(dateStr: string): string {
   }
 }
 
-function truncateAddress(address: string): string {
-  if (address.length <= 20) return address;
-  return `${address.slice(0, 10)}...${address.slice(-8)}`;
-}
-
 interface InfoRowProps {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  value: string;
+  value?: string;
+  children?: React.ReactNode;
 }
 
-function InfoRow({ icon, label, value }: InfoRowProps) {
+function InfoRow({ icon, label, value, children }: InfoRowProps) {
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoIconWrapper}>
@@ -64,9 +61,11 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
       </View>
       <View style={styles.infoTextWrapper}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue} numberOfLines={1}>
-          {value}
-        </Text>
+        {children ?? (
+          <Text style={styles.infoValue} numberOfLines={1}>
+            {value}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -161,11 +160,14 @@ export default function ProfileScreen() {
             <Text style={styles.cardTitle}>Informações da Conta</Text>
 
             {walletAddress ? (
-              <InfoRow
-                icon="wallet-outline"
-                label="Carteira Ethereum"
-                value={truncateAddress(walletAddress)}
-              />
+              <InfoRow icon="wallet-outline" label="Carteira Ethereum">
+                <CopyableText
+                  value={walletAddress}
+                  truncate
+                  textStyle={styles.infoValue}
+                  copiedLabel="Copiar endereço da carteira"
+                />
+              </InfoRow>
             ) : (
               <InfoRow
                 icon="wallet-outline"

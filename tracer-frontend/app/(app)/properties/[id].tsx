@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Button } from '@/components/Button';
 import { CalendarPickerModal, formatDisplayDate } from '@/components/CalendarPicker';
+import { CopyableText } from '@/components/CopyableText';
 import { propertiesApi } from '@/services/api';
 import {
   Certification,
@@ -264,13 +265,25 @@ function CertificationCard({ cert }: { cert: Certification | null }) {
       <View style={{ flex: 1 }}>
         <Text style={styles.certTitleActive}>Certifica Minas ativo</Text>
         <Text style={styles.certSubtitle}>Válido até {validUntil}</Text>
-        <Text style={styles.certHash} numberOfLines={1}>
-          hash: {cert.on_chain_hash.slice(0, 16)}…
-        </Text>
+        <View style={styles.certHashRow}>
+          <Text style={styles.certHash}>hash:</Text>
+          <CopyableText
+            value={cert.on_chain_hash}
+            truncate={{ head: 12, tail: 6 }}
+            textStyle={styles.certHash}
+            copiedLabel="Copiar hash on-chain"
+          />
+        </View>
         {cert.tx_hash && (
-          <Text style={styles.certHash} numberOfLines={1}>
-            tx: {cert.tx_hash.slice(0, 16)}…
-          </Text>
+          <View style={styles.certHashRow}>
+            <Text style={styles.certHash}>tx:</Text>
+            <CopyableText
+              value={cert.tx_hash}
+              truncate={{ head: 12, tail: 6 }}
+              textStyle={styles.certHash}
+              copiedLabel="Copiar hash da transação"
+            />
+          </View>
         )}
       </View>
     </View>
@@ -824,6 +837,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textMuted,
     fontFamily: 'monospace',
+  },
+  certHashRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: 2,
   },
 
